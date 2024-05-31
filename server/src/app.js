@@ -14,16 +14,16 @@ const io = new Server(server, {
 io.on("connection", (socket) => {
     console.log(`Player ${socket.id} connected`);
     socket.playerData = { x: 0, y: 0, z: 0, heading: 0 };
-    socket.emit("setId", { id: socket.id });
+    socket.emit("setSocketId", { socketId: socket.id });
 
     socket.on("disconnect", () => {
         console.log(`Player ${socket.id} disconnected`);
-        socket.broadcast.emit("deletePlayer", { id: socket.id });
+        socket.broadcast.emit("deletePlayer", { socketId: socket.id });
     });
 
     socket.on("init", (data) => {
         console.log(`Initialize player ${socket.id}`);
-        socket.playerData.id = socket.id;
+        socket.playerData.socketId = socket.id;
         socket.playerData.model = data.model;
         socket.playerData.color = data.color;
         socket.playerData.x = data.x;
@@ -46,24 +46,24 @@ io.on("connection", (socket) => {
     });
 
     socket.on("startChat", (data) => {
-        io.to(data.id).emit("startChat", { id: socket.id });
+        io.to(data.socketId).emit("startChat", { socketId: socket.id });
     });
 
     socket.on("chatMessage", (data) => {
-        io.to(data.id).emit("chatMessage", {
-            id: socket.id,
+        io.to(data.socketId).emit("chatMessage", {
+            socketId: socket.id,
             message: data.message,
         });
     });
 
     socket.on("endChat", (data) => {
-        io.to(data.id).emit("endChat", { id: socket.id });
+        io.to(data.socketId).emit("endChat", { socketId: socket.id });
     });
 
     socket.on("getRemoteData", () => {
         let remoteData = {};
-        for (let [id, socket] of io.sockets.sockets) {
-            if (socket.playerData) remoteData[id] = socket.playerData;
+        for (let [socketId, socket] of io.sockets.sockets) {
+            if (socket.playerData) remoteData[socketId] = socket.playerData;
         }
         if (Object.keys(remoteData).length > 0)
             socket.emit("remoteData", remoteData);

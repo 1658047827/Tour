@@ -28,10 +28,10 @@ const ActionType = {
 };
 
 class Character {
-    constructor(scene, id, model, color) {
+    constructor(scene, socketId, model, color) {
         this.scene = scene;
 
-        this.id = id;
+        this.socketId = socketId;
         this.model = model;
         this.color = color;
 
@@ -47,9 +47,9 @@ class Character {
 
     async initialize() {
         await this.loadModel();
-        if (this.id in initializingCharacters) {
-            remoteCharacters[this.id] = this;
-            delete initializingCharacters[this.id];
+        if (this.socketId in initializingCharacters) {
+            remoteCharacters[this.socketId] = this;
+            delete initializingCharacters[this.socketId];
         }
     }
 
@@ -102,13 +102,17 @@ class Character {
 
     update(delta) {
         if (this.mixer) this.mixer.update(delta);
-        if (this.actions) this.setAction(remoteData[this.id].action);
+        if (this.actions) this.setAction(remoteData[this.socketId].action);
         if (this.object) {
-            this.object.position.x = remoteData[this.id].x;
-            this.object.position.y = remoteData[this.id].y;
-            this.object.position.z = remoteData[this.id].z;
+            this.object.position.x = remoteData[this.socketId].x;
+            this.object.position.y = remoteData[this.socketId].y;
+            this.object.position.z = remoteData[this.socketId].z;
 
-            const euler = new THREE.Euler(remoteData[this.id].pitch, remoteData[this.id].heading, remoteData[this.id].bank);
+            const euler = new THREE.Euler(
+                remoteData[this.socketId].pitch,
+                remoteData[this.socketId].heading,
+                remoteData[this.socketId].bank
+            );
             this.object.quaternion.setFromEuler(euler);
         }
     }
@@ -120,38 +124,39 @@ class LocalCharacter extends Character {
 
         this.socket = io('http://localhost:3000');
 
-        this.socket.on("setId", (data) => this.id = data.id);
+        this.socket.on("setSocketId", (data) => this.socketId = data.socketId);
 
         this.socket.on("remoteData", (data) => remoteData = data);
 
         this.socket.on("deletePlayer", (data) => {
-            delete remoteData[data.id];
-            if (data.id in initializingCharacters) {
-                delete initializingCharacters[data.id];
-            } else if (data.id in remoteCharacters) {
-                const character = remoteCharacters[data.id];
-                delete remoteCharacters[data.id];
+            delete remoteData[data.socketId];
+            if (data.socketId in initializingCharacters) {
+                delete initializingCharacters[data.socketId];
+            } else if (data.socketId in remoteCharacters) {
+                const character = remoteCharacters[data.socketId];
+                delete remoteCharacters[data.socketId];
                 this.scene.remove(character.object);
             }
         });
 
         this.socket.on("startChat", (data) => {
-            console.log(`Start chat with player ${data.id}`);
+            console.log(`Start chat with player ${data.socketId}`);
             document.getElementById('chat').style.bottom = '0px';
-            speechBubble.character = remoteCharacters[data.id];
-            chatSocketId = data.id;
+            speechBubble.character = remoteCharacters[data.socketId];
+            speechBubble.update("");
+            chatSocketId = data.socketId;
             this.scene.add(speechBubble.mesh);
             removeKeyboardListeners();
             localCharacter.setAction(ActionType.Talk);
         });
 
         this.socket.on("chatMessage", (data) => {
-            console.log(`Received message '${data.message}' from player ${data.id}`);
+            console.log(`Received message '${data.message}' from player ${data.socketId}`);
             speechBubble.update(data.message);
         });
 
         this.socket.on("endChat", (data) => {
-            console.log(`End chat with player ${data.id}`);
+            console.log(`End chat with player ${data.socketId}`);
             document.getElementById('chat').style.bottom = '-55px';
             speechBubble.character = null;
             chatSocketId = null;
@@ -402,12 +407,12 @@ const onKeydown = (event) => {
         });
 
         if (selectedCharacter) {
-            localCharacter.socket.emit("startChat", { id: selectedCharacter.id });
-            console.log(`Start chat with player ${selectedCharacter.id}`);
+            localCharacter.socket.emit("startChat", { socketId: selectedCharacter.socketId });
+            console.log(`Start chat with player ${selectedCharacter.socketId}`);
             speechBubble.character = selectedCharacter;
             speechBubble.update("");
             scene.add(speechBubble.mesh);
-            chatSocketId = selectedCharacter.id;
+            chatSocketId = selectedCharacter.socketId;
             document.getElementById('chat').style.bottom = "0px";
             removeKeyboardListeners();
             localCharacter.setAction(ActionType.Talk);
@@ -440,13 +445,13 @@ const remoteCharacters = {};
 const speechBubble = new SpeechBubble(scene, "", 150);
 
 const updateRemoteCharacters = (delta) => {
-    if (remoteData && localCharacter && localCharacter.id) {
-        for (let [id, data] of Object.entries(remoteData)) {
-            if (id === localCharacter.id) continue;
-            if (id in initializingCharacters) continue;
-            if (!(id in remoteCharacters)) {
-                initializingCharacters[id] = new Character(scene, id, data.model, data.color);
-                initializingCharacters[id].initialize();
+    if (remoteData && localCharacter && localCharacter.socketId) {
+        for (let [socketId, data] of Object.entries(remoteData)) {
+            if (socketId === localCharacter.socketId) continue;
+            if (socketId in initializingCharacters) continue;
+            if (!(socketId in remoteCharacters)) {
+                initializingCharacters[socketId] = new Character(scene, socketId, data.model, data.color);
+                initializingCharacters[socketId].initialize();
             }
         }
 
@@ -519,12 +524,12 @@ let chatSocketId = null;
 const message = ref("");
 const sendChatMessage = () => {
     if (message.value !== "") {
-        localCharacter.socket.emit("chatMessage", { id: chatSocketId, message: message.value });
+        localCharacter.socket.emit("chatMessage", { socketId: chatSocketId, message: message.value });
         message.value = "";
     }
 }
 const endChat = () => {
-    localCharacter.socket.emit("endChat", { id: chatSocketId });
+    localCharacter.socket.emit("endChat", { socketId: chatSocketId });
     console.log(`End chat with player ${chatSocketId}`);
     document.getElementById('chat').style.bottom = '-55px';
     speechBubble.character = null;
