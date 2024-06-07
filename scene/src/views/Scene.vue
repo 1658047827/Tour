@@ -15,7 +15,7 @@ import { ref } from 'vue';
 import * as THREE from 'three';
 import { FBXLoader } from 'three/addons/loaders/FBXLoader';
 import { io } from "socket.io-client";
-import { CloseBold, Message } from '@element-plus/icons-vue'
+import { CloseBold, Message } from '@element-plus/icons-vue';
 
 const ActionType = {
     Idle: "Idle",
@@ -38,6 +38,8 @@ class Character {
         this.mixer = null;
         this.object = null;
         this.texture = null;
+
+        this.velocity = new THREE.Vector3();
 
         this.animations = {};
         this.actions = {};
@@ -249,12 +251,87 @@ class LocalCharacter extends Character {
     }
 
     makeMovement(delta) {
-        if (this.move.forward > 0) {
-            const speed = (this.currActionType === ActionType.Run) ? 400 : 150;
-            this.object.translateZ(delta * speed);
-        } else if (this.move.forward < 0) {
-            this.object.translateZ(-delta * 100);
+        const pos = this.object.position.clone();
+        pos.y += 60;
+        let dir = new THREE.Vector3();
+        this.object.getWorldDirection(dir);
+        if (this.move.forward < 0) dir.negate();
+        let raycaster = new THREE.Raycaster(pos, dir);
+        let blocked = false;
+
+        if (colliders) {
+            const intersect = raycaster.intersectObjects(colliders);
+            if (intersect.length > 0) {
+                if (intersect[0].distance < 50) blocked = true;
+            }
         }
+
+        if (!blocked) {
+            if (this.move.forward > 0) {
+                const speed = (this.currActionType === ActionType.Run) ? 400 : 150;
+                this.object.translateZ(delta * speed);
+            } else if (this.move.forward < 0) {
+                this.object.translateZ(-delta * 100);
+            }
+        }
+
+        if (colliders !== undefined) {
+            //cast left
+            dir.set(-1, 0, 0);
+            dir.applyMatrix4(this.object.matrix);
+            dir.normalize();
+            raycaster = new THREE.Raycaster(pos, dir);
+
+            let intersect = raycaster.intersectObjects(colliders);
+            if (intersect.length > 0)
+                if (intersect[0].distance < 50)
+                    this.object.translateX(100 - intersect[0].distance);
+
+            //cast right
+            dir.set(1, 0, 0);
+            dir.applyMatrix4(this.object.matrix);
+            dir.normalize();
+            raycaster = new THREE.Raycaster(pos, dir);
+
+            intersect = raycaster.intersectObjects(colliders);
+            if (intersect.length > 0)
+                if (intersect[0].distance < 50)
+                    this.object.translateX(intersect[0].distance - 100);
+
+            //cast down
+            dir.set(0, -1, 0);
+            pos.y += 200;
+            raycaster = new THREE.Raycaster(pos, dir);
+            const gravity = 30;
+
+            intersect = raycaster.intersectObjects(colliders);
+            if (intersect.length > 0) {
+                const targetY = pos.y - intersect[0].distance;
+                if (targetY > this.object.position.y) {
+                    //Going up
+                    this.object.position.y = 0.8 * this.object.position.y + 0.2 * targetY;
+                    this.velocityY = 0;
+                } else if (targetY < this.object.position.y) {
+                    //Falling
+                    if (!this.velocityY) this.velocityY = 0;
+                    this.velocityY += delta * gravity;
+                    this.object.position.y -= this.velocityY;
+                    if (this.object.position.y < targetY) {
+                        this.velocityY = 0;
+                        this.object.position.y = targetY;
+                    }
+                }
+            } else if (this.object.position.y > 0) {
+                if (!this.velocityY) this.velocityY = 0;
+                this.velocityY += delta * gravity;
+                this.object.position.y -= this.velocityY;
+                if (this.object.position.y < 0) {
+                    this.velocityY = 0;
+                    this.object.position.y = 0;
+                }
+            }
+        }
+
         this.object.rotateY(this.move.turn * delta);
     }
 
@@ -488,11 +565,34 @@ const loadAnimations = async () => {
     }
 }
 
+const colliders = [];
+const createColliders = () => {
+    const geometry = new THREE.BoxGeometry(500, 400, 500);
+    const material = new THREE.MeshBasicMaterial({ color: 0x222222, wireframe: true });
+
+    for (let x = -5000; x < 5000; x += 1000) {
+        for (let z = -5000; z < 5000; z += 1000) {
+            if (x == 0 && z == 0) continue;
+            const box = new THREE.Mesh(geometry, material);
+            box.position.set(x, 250, z);
+            scene.add(box);
+            colliders.push(box);
+        }
+    }
+
+    const geometry2 = new THREE.BoxGeometry(1000, 40, 1000);
+    const stage = new THREE.Mesh(geometry2, material);
+    stage.position.set(0, 20, 0);
+    colliders.push(stage);
+    scene.add(stage);
+}
+
 const initializeGame = async () => {
     await loadAnimations();
     await localCharacter.initialize();
     await speechBubble.initialize();
     addKeyboardListeners();
+    createColliders();
     animate();
 }
 
