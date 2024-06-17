@@ -1,5 +1,6 @@
 <template>
     <div>
+        <div ref="container"></div>
         <div id="chat">
             <div style="width: 90%;">
                 <el-input id="msg" size="large" v-model="message" autocomplete="off" placeholder="Enter a message" />
@@ -11,11 +12,18 @@
 </template>
 
 <script setup>
-import { ref } from 'vue';
+import { onMounted, ref } from 'vue';
 import * as THREE from 'three';
 import { FBXLoader } from 'three/addons/loaders/FBXLoader';
 import { io } from "socket.io-client";
 import { CloseBold, Message } from '@element-plus/icons-vue';
+import { useRouter } from "vue-router";
+import { useStore } from "vuex";
+
+const container = ref();
+
+const router = useRouter();
+const store = useStore();
 
 const ActionType = {
     Idle: "Idle",
@@ -268,7 +276,7 @@ class LocalCharacter extends Character {
 
         if (!blocked) {
             if (this.move.forward > 0) {
-                const speed = (this.currActionType === ActionType.Run) ? 400 : 150;
+                const speed = (this.currActionType === ActionType.Run) ? 600 : 200;
                 this.object.translateZ(delta * speed);
             } else if (this.move.forward < 0) {
                 this.object.translateZ(-delta * 100);
@@ -440,21 +448,21 @@ const clock = new THREE.Clock();
 const scene = new THREE.Scene();
 scene.background = new THREE.Color(0xa0a0a0);
 
-const camera = new THREE.PerspectiveCamera(45, window.innerWidth / window.innerHeight, 1, 5000);
+const camera = new THREE.PerspectiveCamera(45, window.innerWidth / window.innerHeight, 1, 10000);
 camera.position.set(0, 400, -900);
 
 const hemisphereLight = new THREE.HemisphereLight(0xffffff, 0x444444);
 hemisphereLight.position.set(0, 200, 0);
 scene.add(hemisphereLight);
 
-const groundGeometry = new THREE.PlaneGeometry(5000, 5000);
+const groundGeometry = new THREE.PlaneGeometry(10000, 10000);
 const groundMaterial = new THREE.MeshStandardMaterial({ color: 0x999999, depthWrite: false })
 const ground = new THREE.Mesh(groundGeometry, groundMaterial);
 ground.rotation.x = - Math.PI / 2;
 ground.receiveShadow = true;
 scene.add(ground);
 
-const grid = new THREE.GridHelper(5000, 40, 0x000000, 0x000000);
+const grid = new THREE.GridHelper(10000, 40, 0x000000, 0x000000);
 grid.material.opacity = 0.2;
 grid.material.transparent = true;
 scene.add(grid);
@@ -462,10 +470,7 @@ scene.add(grid);
 const renderer = new THREE.WebGLRenderer();
 renderer.setSize(window.innerWidth, window.innerHeight);
 renderer.shadowMap.enabled = true;
-document.body.appendChild(renderer.domElement);
-
-const people = ['BeachBabe', 'BusinessMan', 'Doctor', 'FireFighter', 'HouseWife', 'Policeman', 'Prostitute', 'Punk', 'RiotCop', 'RoadWorker', 'Robber', 'Sheriff', 'StreetMan', 'Waitress'];
-const color = ["Black", "Brown", "White"];
+// document.body.appendChild(renderer.domElement);
 
 const keys = { w: 0, a: 0, s: 0, d: 0 };
 const onKeydown = (event) => {
@@ -510,11 +515,7 @@ const removeKeyboardListeners = () => {
     document.removeEventListener("keyup", onKeyup);
 }
 
-const localCharacter = new LocalCharacter(
-    scene,
-    people[Math.floor(Math.random() * people.length)],
-    color[Math.floor(Math.random() * color.length)]
-);
+const localCharacter = new LocalCharacter(scene, store.state.model, store.state.color);
 let remoteData;
 const initializingCharacters = {};
 const remoteCharacters = {};
@@ -566,22 +567,56 @@ const loadAnimations = async () => {
 }
 
 const colliders = [];
+const maze = [
+    [1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1],
+    [1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1],
+    [1, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 1],
+    [1, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 1],
+    [1, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 1],
+    [1, 1, 0, 0, 0, 1, 1, 1, 0, 0, 0, 0, 1, 1, 1, 0, 0, 0, 1, 1],
+    [1, 1, 0, 0, 0, 1, 1, 1, 0, 0, 0, 0, 1, 1, 1, 0, 0, 0, 1, 1],
+    [1, 1, 0, 0, 0, 1, 1, 1, 0, 0, 0, 0, 1, 1, 1, 0, 0, 0, 1, 1],
+    [1, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 1],
+    [1, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 1],
+    [1, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 1],
+    [1, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 1],
+    [1, 1, 0, 0, 0, 1, 1, 1, 0, 0, 0, 0, 1, 1, 1, 0, 0, 0, 1, 1],
+    [1, 1, 0, 0, 0, 1, 1, 1, 0, 0, 0, 0, 1, 1, 1, 0, 0, 0, 1, 1],
+    [1, 1, 0, 0, 0, 1, 1, 1, 0, 0, 0, 0, 1, 1, 1, 0, 0, 0, 1, 1],
+    [1, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 1],
+    [1, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 1],
+    [1, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 1],
+    [1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1],
+    [1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1]
+];
 const createColliders = () => {
-    const geometry = new THREE.BoxGeometry(500, 400, 500);
-    const material = new THREE.MeshBasicMaterial({ color: 0x222222, wireframe: true });
+    const geometry = new THREE.BoxGeometry(500, 800, 500);
+    const material = new THREE.MeshStandardMaterial({ color: 0xffffff });
 
-    for (let x = -5000; x < 5000; x += 1000) {
-        for (let z = -5000; z < 5000; z += 1000) {
-            if (x == 0 && z == 0) continue;
-            const box = new THREE.Mesh(geometry, material);
-            box.position.set(x, 250, z);
-            scene.add(box);
-            colliders.push(box);
+    // for (let x = -5000; x < 5000; x += 1000) {
+    //     for (let z = -5000; z < 5000; z += 1000) {
+    //         if (x == 0 && z == 0) continue;
+    //         const box = new THREE.Mesh(geometry, material);
+    //         box.position.set(x, 400, z);
+    //         scene.add(box);
+    //         colliders.push(box);
+    //     }
+    // }
+
+    for (let i = 0; i < 20; i++) {
+        for (let j = 0; j < 20; j++) {
+            if (maze[i][j] === 1) {
+                const box = new THREE.Mesh(geometry, material);
+                box.position.set(-5000 + 500 * i, 400, -5000 + 500 * j);
+                scene.add(box);
+                colliders.push(box);
+            }
         }
     }
 
     const geometry2 = new THREE.BoxGeometry(1000, 40, 1000);
-    const stage = new THREE.Mesh(geometry2, material);
+    const stageMaterial = new THREE.MeshStandardMaterial({ color: 0x575757 });
+    const stage = new THREE.Mesh(geometry2, stageMaterial);
     stage.position.set(0, 20, 0);
     colliders.push(stage);
     scene.add(stage);
@@ -639,6 +674,10 @@ const endChat = () => {
 }
 
 initializeGame();
+
+onMounted(() => {
+    container.value.appendChild(renderer.domElement);
+});
 </script>
 
 <style scoped>

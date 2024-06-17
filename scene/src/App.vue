@@ -1,9 +1,12 @@
 <template>
-    <Scene />
+    <router-view />
+    <!-- <Scene /> -->
+    <!-- <Login /> -->
 </template>
 
 <script setup>
-import Scene from "./views/Scene.vue";
+// import Scene from "./views/Scene.vue";
+// import Login from "./views/Login.vue";
 </script>
 
 <style>
