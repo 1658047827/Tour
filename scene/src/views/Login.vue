@@ -209,7 +209,7 @@ const login = async () => {
         login_loading.value = true;
         // 使用深拷贝，避免表单中的密码转成md5
         let res = await proxy.$api.loginApi({
-            username: loginForm.username,
+            userName: loginForm.username,
             password: md5(loginForm.password)
         }).catch(error => {
             // 关闭登录按钮loading
@@ -239,10 +239,12 @@ const register = async () => {
         register_loading.value = true;
         // 使用深拷贝，避免表单中的密码转成md5
         let res = await proxy.$api.registerApi({
-            username: registerForm.username,
+            userId: 0,
+            userName: registerForm.username,
             email: registerForm.email,
             password: md5(registerForm.password),
-            confirmPassword: registerForm.confirmPassword,
+            model: registerForm.model,
+            color: registerForm.color,
         }).catch(error => {
             // 关闭注册按钮loading
             register_loading.value = false;

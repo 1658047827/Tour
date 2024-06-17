@@ -15,7 +15,12 @@ const api = {
         });
     },
     registerApi(params) {
-        return instance.post("/register", params);
+        return new Promise((resolve, reject) => {
+            instance.post("/register", params).then(
+                (response) => resolve(response.data),
+                (err) => reject(err)
+            );
+        });
     },
 };
 

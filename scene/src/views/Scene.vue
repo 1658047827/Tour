@@ -8,6 +8,9 @@
             <el-button id="sendBtn" size="large" type="primary" :icon="Message" @click="sendChatMessage" />
             <el-button id="closeBtn" size="large" type="danger" :icon="CloseBold" @click="endChat" />
         </div>
+        <div id="info">
+            No info
+        </div>
     </div>
 </template>
 
@@ -219,7 +222,7 @@ class LocalCharacter extends Character {
     setupCamera() {
         this.cameraGroup = new THREE.Group();
         this.cameraObject = new THREE.Object3D();
-        this.cameraObject.position.set(0, 400, -900);
+        this.cameraObject.position.set(0, 360, -900);
         this.cameraGroup.add(this.cameraObject);
         this.object.add(this.cameraGroup);
     }
@@ -499,8 +502,33 @@ const onKeydown = (event) => {
             removeKeyboardListeners();
             localCharacter.setAction(ActionType.Talk);
         }
+    } else if (event.key === 'e') {
+        const infoBox = document.getElementById('info');
+        if (infoBox.style.display === "block") {
+            infoBox.style.display = null;
+            infoBox.innerText = "No info";
+            return;
+        }
+
+        let minDistance = Infinity;
+        let selectedPainting = null;
+        paintings.forEach(painting => {
+            const distance = localCharacter.object.position.distanceTo(painting.plane.position);
+            if (distance < 800 && distance < minDistance) {
+                minDistance = distance;
+                selectedPainting = painting;
+            }
+        });
+
+        if (selectedPainting) {
+            infoBox.style.display = 'block';
+            fetch(`text/${selectedPainting.name}.txt`)
+                .then(response => response.text())
+                .then(data => infoBox.innerText = data)
+        }
     }
 }
+
 const onKeyup = (event) => {
     if (event.key in keys) {
         keys[event.key] = 0;
@@ -515,7 +543,9 @@ const removeKeyboardListeners = () => {
     document.removeEventListener("keyup", onKeyup);
 }
 
-const localCharacter = new LocalCharacter(scene, store.state.model, store.state.color);
+const model = store.state.model ? store.state.model : "FireFighter";
+const color = store.state.color ? store.state.color : "Brown";
+const localCharacter = new LocalCharacter(scene, model, color);
 let remoteData;
 const initializingCharacters = {};
 const remoteCharacters = {};
@@ -591,17 +621,11 @@ const maze = [
 ];
 const createColliders = () => {
     const geometry = new THREE.BoxGeometry(500, 800, 500);
-    const material = new THREE.MeshStandardMaterial({ color: 0xffffff });
-
-    // for (let x = -5000; x < 5000; x += 1000) {
-    //     for (let z = -5000; z < 5000; z += 1000) {
-    //         if (x == 0 && z == 0) continue;
-    //         const box = new THREE.Mesh(geometry, material);
-    //         box.position.set(x, 400, z);
-    //         scene.add(box);
-    //         colliders.push(box);
-    //     }
-    // }
+    const material = new THREE.MeshStandardMaterial({
+        color: 0xffffff,
+        roughness: 0.7,
+        metalness: 0.1
+    });
 
     for (let i = 0; i < 20; i++) {
         for (let j = 0; j < 20; j++) {
@@ -620,26 +644,96 @@ const createColliders = () => {
     stage.position.set(0, 20, 0);
     colliders.push(stage);
     scene.add(stage);
+};
+
+const paintings = [];
+const loadPainting = async (width, height, name, position, rotation) => {
+    const geometry = new THREE.PlaneGeometry(width, height);
+    const textureLoader = new THREE.TextureLoader();
+    const texture = await textureLoader.loadAsync(`image/${name}.jpg`);
+    texture.colorSpace = THREE.SRGBColorSpace;
+    const material = new THREE.MeshBasicMaterial({ map: texture });
+    const plane = new THREE.Mesh(geometry, material);
+    plane.position.set(position.x, position.y, position.z);
+    plane.rotation.set(rotation.x, rotation.y, rotation.z);
+    scene.add(plane);
+    paintings.push({ name, plane });
 }
+
+const loadPaintings = async () => {
+    await loadPainting(
+        429,
+        534,
+        "Woman with a Parasol - Madame Monet and Her Son",
+        new THREE.Vector3(-1247, 390, 1500),
+        new THREE.Euler(0, Math.PI / 2, 0)
+    );
+    await loadPainting(
+        663,
+        538,
+        "The Japanese Footbridge",
+        new THREE.Vector3(-2000, 400, 748),
+        new THREE.Euler(0, Math.PI, 0)
+    );
+    await loadPainting(
+        673,
+        534,
+        "Bathers at La Grenouillère",
+        new THREE.Vector3(748, 400, 1500),
+        new THREE.Euler(0, -Math.PI / 2, 0)
+    );
+    await loadPainting(
+        677,
+        535,
+        "Snow Scene at Argenteuil",
+        new THREE.Vector3(1500, 400, 748),
+        new THREE.Euler(0, Math.PI, 0)
+    );
+    await loadPainting(
+        666,
+        535,
+        "Cliff Walk at Pourville",
+        new THREE.Vector3(1500, 400, -1248),
+        new THREE.Euler(0, 0, 0)
+    );
+    await loadPainting(
+        688,
+        442,
+        "The Thames below Westminster",
+        new THREE.Vector3(748, 400, -2000),
+        new THREE.Euler(0, -Math.PI / 2, 0)
+    );
+    await loadPainting(
+        688,
+        516,
+        "The Bridge at Argenteuil",
+        new THREE.Vector3(-2000, 400, -1248),
+        new THREE.Euler(0, 0, 0)
+    );
+    await loadPainting(
+        650,
+        535,
+        "The Beach at Trouville",
+        new THREE.Vector3(-1248, 400, -2000),
+        new THREE.Euler(0, Math.PI / 2, 0)
+    );
+};
 
 const initializeGame = async () => {
     await loadAnimations();
     await localCharacter.initialize();
     await speechBubble.initialize();
+    await loadPaintings();
     addKeyboardListeners();
     createColliders();
     animate();
-}
+};
 
 window.addEventListener("resize", () => {
     camera.aspect = window.innerWidth / window.innerHeight;
     camera.updateProjectionMatrix();
 
     renderer.setSize(window.innerWidth, window.innerHeight);
-});
-
-document.body.addEventListener('click', () => {
-    document.body.requestPointerLock();
 });
 
 document.addEventListener('pointerlockchange', () => {
@@ -677,6 +771,9 @@ initializeGame();
 
 onMounted(() => {
     container.value.appendChild(renderer.domElement);
+    container.value.addEventListener('click', () => {
+        document.body.requestPointerLock();
+    });
 });
 </script>
 
@@ -696,5 +793,18 @@ onMounted(() => {
 
 #chat #sendBtn {
     margin-left: 12px;
+}
+
+#info {
+    position: absolute;
+    top: 10px;
+    left: 10px;
+    padding: 10px;
+    margin-right: 10px;
+    width: 500px;
+    background: rgba(0, 0, 0, 0.8);
+    color: white;
+    display: none;
+    /* Initially hidden */
 }
 </style>
