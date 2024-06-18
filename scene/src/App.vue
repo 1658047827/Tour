@@ -10,15 +10,23 @@
 </script>
 
 <style>
-body {
+html {
     margin: 0;
+    height: 100%;
+    width: 100%;
 }
 
-canvas {
-    position: fixed;
-    left: 0;
-    top: 0;
-    width: 100vw;
-    height: 100vh;
+body {
+    margin: 0;
+    height: 100%;
+    width: 100%;
+}
+
+#app {
+    height: 100%;
+    width: 100%;
+    margin: 0;
+    padding: 0;
+    background: #c3c6ca6e;
 }
 </style>

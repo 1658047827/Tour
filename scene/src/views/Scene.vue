@@ -1,6 +1,7 @@
 <template>
     <div>
         <div ref="container"></div>
+        <el-button id="user-btn" @click="toUserInfo">个人信息</el-button>
         <div id="chat">
             <div style="width: 90%;">
                 <el-input id="msg" size="large" v-model="message" autocomplete="off" placeholder="Enter a message" />
@@ -135,7 +136,7 @@ class LocalCharacter extends Character {
     constructor(scene, model, color) {
         super(scene, null, model, color);
 
-        this.socket = io('http://localhost:3000');
+        this.socket = io('http://120.26.137.179:3000/');
 
         this.socket.on("setSocketId", (data) => this.socketId = data.socketId);
 
@@ -769,6 +770,10 @@ const endChat = () => {
 
 initializeGame();
 
+const toUserInfo = () => {
+    router.push("/user");
+};
+
 onMounted(() => {
     container.value.appendChild(renderer.domElement);
     container.value.addEventListener('click', () => {
@@ -806,5 +811,11 @@ onMounted(() => {
     color: white;
     display: none;
     /* Initially hidden */
+}
+
+#user-btn {
+    position: absolute;
+    top: 10px;
+    right: 10px;
 }
 </style>
