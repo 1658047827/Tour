@@ -11,21 +11,7 @@ import org.springframework.boot.test.context.SpringBootTest;
 
 @SpringBootTest
 public class MainTests {
-    @Autowired
-    UserDao userDao;
-    @Autowired
-    UserService userService;
     @Test
     public void contextLoads() {
-        User user = userDao.selectUserByUsername("erw");
-        user.setUserName("erew");
-        user.setPassword("123456");
-        user.setColor("red");
-        user.setModel("police");
-        user.setEmail("1@qq.com");
-//        RetCode register = userService.register(user);
-        R ret = userService.getUserById(1);
-
-        System.out.println(ret);
     }
 }

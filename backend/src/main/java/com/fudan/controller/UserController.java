@@ -16,13 +16,10 @@ public class UserController {
     @GetMapping("/login")
     public R login(String userName, String password) {
         return userService.login(userName, password);
-
-
     }
 
     @PostMapping("/register")
     public R register(@RequestBody User user) {
-//        System.out.println(user);
         RetCode retCode = userService.register(user);
         return new R(retCode);
     }
