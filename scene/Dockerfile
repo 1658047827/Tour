@@ -1,5 +1,3 @@
-FROM node:20-slim
-WORKDIR /usr/src/scene
-COPY . .
-RUN npm install
-RUN npm run dev
+FROM nginx
+COPY dist/  /usr/share/nginx/html/
+COPY default.conf /etc/nginx/conf.d/default.conf

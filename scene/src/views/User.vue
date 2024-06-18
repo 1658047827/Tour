@@ -130,7 +130,7 @@ const getUserInfo = async (userId) => {
 onMounted(async () => {
     container.value.appendChild(renderer.domElement);
     renderer.domElement.style.borderRadius = "5px";
-    await getUserInfo(store.userId);
+    await getUserInfo(store.state.userId);
     loader.load(`model/${model.value}.fbx`, (object) => {
         mixer = new THREE.AnimationMixer(object);
         scene.add(object);

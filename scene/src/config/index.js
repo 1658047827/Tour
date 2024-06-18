@@ -6,11 +6,11 @@ const EnvConfig = {
         mockApi: "http://127.0.0.1:4523/m1/4592529-4241944-default",
     },
     test: {
-        baseApi: "/api",
+        baseApi: "http://120.26.137.179/api",
         mockApi: "http://127.0.0.1:4523/m1/4592529-4241944-default",
     },
     production: {
-        baseApi: "http://120.26.137.179:8080",
+        baseApi: "http://120.26.137.179/api",
         mockApi: "http://127.0.0.1:4523/m1/4592529-4241944-default",
     },
 };

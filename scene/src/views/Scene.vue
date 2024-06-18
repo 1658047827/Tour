@@ -137,6 +137,7 @@ class LocalCharacter extends Character {
         super(scene, null, model, color);
 
         this.socket = io('http://120.26.137.179:3000/');
+        // this.socket = io('http://localhost:3000/');
 
         this.socket.on("setSocketId", (data) => this.socketId = data.socketId);
 
@@ -204,6 +205,7 @@ class LocalCharacter extends Character {
             bank: this.object.rotation.z,
             action: this.currActionType
         });
+        console.log(`client init: ${this.model} ${this.color}`);
     }
 
     socketUpdate() {
@@ -558,7 +560,8 @@ const updateRemoteCharacters = (delta) => {
         for (let [socketId, data] of Object.entries(remoteData)) {
             if (socketId === localCharacter.socketId) continue;
             if (socketId in initializingCharacters) continue;
-            if (!(socketId in remoteCharacters)) {
+            if (!(socketId in remoteCharacters) && data.model && data.color) {
+                console.log(data);
                 initializingCharacters[socketId] = new Character(scene, socketId, data.model, data.color);
                 initializingCharacters[socketId].initialize();
             }
@@ -771,6 +774,7 @@ const endChat = () => {
 initializeGame();
 
 const toUserInfo = () => {
+    localCharacter.socket.disconnect();
     router.push("/user");
 };
 
