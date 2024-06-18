@@ -8,7 +8,8 @@ const app = express();
 const server = createServer(app);
 const io = new Server(server, {
     cors: {
-        origin: "http://localhost:5173", // address of Vue app
+        // origin: "http://localhost:5173", // address of Vue app
+        origin: "http://120.26.137.179", // address of Vue app
         methods: ["GET", "POST"],
     },
 });
@@ -41,6 +42,10 @@ io.on("connection", (socket) => {
         socket.playerData.pitch = data.pitch;
         socket.playerData.bank = data.bank;
         socket.playerData.action = data.action;
+
+        console.log(
+            `${socket.id} PlayerData: ${socket.playerData.model} ${socket.playerData.color}`
+        );
     });
 
     socket.on("update", (data) => {
@@ -71,7 +76,12 @@ io.on("connection", (socket) => {
     socket.on("getRemoteData", () => {
         let remoteData = {};
         for (let [socketId, socket] of io.sockets.sockets) {
-            if (socket.playerData) remoteData[socketId] = socket.playerData;
+            if (
+                socket.playerData &&
+                socket.playerData.model &&
+                socket.playerData.color
+            )
+                remoteData[socketId] = socket.playerData;
         }
         if (Object.keys(remoteData).length > 0)
             socket.emit("remoteData", remoteData);
@@ -79,5 +89,5 @@ io.on("connection", (socket) => {
 });
 
 server.listen(3000, () => {
-    console.log("server running at http://localhost:3000");
+    console.log("server running at http://120.26.137.179:3000");
 });
